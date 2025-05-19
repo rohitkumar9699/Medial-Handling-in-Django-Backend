@@ -101,10 +101,10 @@ class UpdateView(View):
             
             import os
 
-            count = Media.objects.count() + 1  # current count + 1
+            
             original_name = file.name.replace(" ", "_")  # clean spaces just in case
             _, ext = os.path.splitext(original_name)  # get the file extension only
-            new_name = f"{count}{ext}"  # just the count plus extension
+            new_name = f"{file_id}_{ext}"  # just the count plus extension
             file.name = new_name
 
             media_file.save()
