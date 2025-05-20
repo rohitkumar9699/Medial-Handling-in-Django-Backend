@@ -147,3 +147,116 @@ class DeleteView(View):
             return HttpResponse('File not found', status=404)
         
 
+# # views.py
+# import pandas as pd
+# from django.http import JsonResponse
+
+# @method_decorator(csrf_exempt, name='dispatch')
+# class MarksUploadView(View):
+
+#     def post(self, request):
+#         uploaded_file = request.FILES.get('file')
+#         roll = request.POST.get('roll')
+#         print(roll)
+#         if not uploaded_file:
+#             return JsonResponse({'error': 'No file uploaded'}, status=400)
+
+#         try:
+#             # Read CSV into DataFrame
+#             df = pd.read_csv(uploaded_file)
+#             df.columns = df.columns.str.strip()
+
+#             if 'roll' not in df.columns:
+#                 return JsonResponse({'error': "'roll' column not found in the file"}, status=400)
+
+#             if roll not in df['roll'].values:
+#                 return JsonResponse({'error': 'Roll number not found in the file'}, status=404)
+
+#             # Always calculate average for all students
+#             df['Average'] = df[['DAA', 'JAVA', 'PYTHON', 'C++']].mean(axis=1)
+
+#             # Filter the student with the given roll
+#             student_data = df[df['roll'] == roll].to_dict(orient='records')[0]
+#             return JsonResponse({'student': student_data})
+        
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
+
+
+
+import pandas as pd
+
+from django.http import JsonResponse
+from .models import Marks, Students
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FileUploadView(View):
+    def post(self, request):
+        student_file = request.FILES.get('student_file')
+        marks_file = request.FILES.get('marks_file')
+        user_roll = request.POST.get('roll')
+
+        if not student_file:
+            return JsonResponse({'error': 'No file student_file'}, status=400)
+        if not marks_file:
+            return JsonResponse({'error': 'No file marks_file'}, status=400)
+
+        try:
+            # Load CSVs into pandas DataFrames
+            df_students = pd.read_csv(student_file)
+            df_marks = pd.read_csv(marks_file)
+
+            # Clean column names
+            df_students.columns = df_students.columns.str.strip()
+            df_marks.columns = df_marks.columns.str.strip()
+
+            # Calculate average
+            df_marks['Average'] = df_marks[['DAA', 'JAVA', 'PYTHON', 'C++']].mean(axis=1)
+
+            # Save/update students
+            for _, row in df_students.iterrows():
+                Students.objects.update_or_create(
+                    roll=row['roll'],
+                    defaults={
+                        'name': row.get('name', ''),
+                        'email': row.get('email', ''),
+                        'branch': row.get('branch', ''),
+                        'semester': row.get('semester', 1),
+                        'section': row.get('section', ''),
+                        'number': row.get('number', ''),
+                    }
+                )
+
+            # Save/update marks
+            for _, row in df_marks.iterrows():
+                student_obj = Students.objects.filter(roll=row['roll']).first()
+                print(student_obj)
+                if not student_obj:
+                    continue  # Skip if no matching student
+
+                Marks.objects.update_or_create(
+                    roll=student_obj,
+                    defaults={
+                        'daa': row.get('DAA'),
+                        'java': row.get('JAVA'),
+                        'python': row.get('PYTHON'),
+                        'cpp': row.get('C++'),
+                        'average': row.get('Average'),
+                    }
+                )
+
+            # Return data for specific roll if provided
+            if user_roll:
+                marks = Marks.objects.filter(roll__roll=user_roll).values(
+                    'roll__roll', 'daa', 'java', 'python', 'cpp', 'average'
+                ).first()
+
+                if not marks:
+                    return JsonResponse({'error': 'Roll number not found'}, status=404)
+
+                return JsonResponse({'marks': marks})
+
+            return JsonResponse({'message': 'Data uploaded successfully'})
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
