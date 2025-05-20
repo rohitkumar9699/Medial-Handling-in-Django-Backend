@@ -63,10 +63,22 @@ class ListMediaView(View):
 
         for media_file in all_media:
             file_url = media_file.file.url
+            file_name = media_file.title or file_url.split('/')[-1]
+            ext = file_url.lower().split('.')[-1]
+
+            if ext in ["jpg", "jpeg", "png", "gif"]:
+                content = f'<img src="{file_url}" alt="{file_name}" width="300">'
+            elif ext == "pdf":
+                content = f'<iframe src="{file_url}" width="100%" height="500px"></iframe>'
+            elif ext in ["xls", "xlsx", "csv"]:
+                content = f'<p>Excel/CSV file: <a href="{file_url}" target="_blank">Download/View</a></p>'
+            else:
+                content = f'<p>File: <a href="{file_url}" target="_blank">Download/View</a></p>'
+
             html += f'''
                 <div style="margin-bottom: 20px;">
-                    <img src="{file_url}" alt="{media_file.title}" width="300"><br>
-                    <strong>File ID:</strong> {media_file.id}<br>
+                    {content}
+                    <br><strong>File ID:</strong> {media_file.id}<br>
                     <strong>Title:</strong> {media_file.title}<br>
                     <strong>Description:</strong> {media_file.description}<br>
                     <a href="{file_url}" download>Download File</a>
@@ -74,7 +86,7 @@ class ListMediaView(View):
                 <hr>
             '''
 
-        return HttpResponse(html)
+        return HttpResponse(html)   
 
 
 
@@ -133,3 +145,5 @@ class DeleteView(View):
             return HttpResponse('File deleted successfully!', status=200)
         except Media.DoesNotExist:
             return HttpResponse('File not found', status=404)
+        
+
