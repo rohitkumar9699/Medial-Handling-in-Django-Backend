@@ -102,7 +102,9 @@ class UpdateView(View):
             return HttpResponse("File ID is required", status=400)
 
         try:
-            media_file = Media.objects.get(id=file_id)
+            media_file = Media.objects.filter(id=file_id).first()
+            if not media_file:
+                return HttpResponse("You have ebtered the wrong ID", status=404)
 
             if title:
                 media_file.title = title
@@ -147,41 +149,6 @@ class DeleteView(View):
             return HttpResponse('File not found', status=404)
         
 
-# # views.py
-# import pandas as pd
-# from django.http import JsonResponse
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class MarksUploadView(View):
-
-#     def post(self, request):
-#         uploaded_file = request.FILES.get('file')
-#         roll = request.POST.get('roll')
-#         print(roll)
-#         if not uploaded_file:
-#             return JsonResponse({'error': 'No file uploaded'}, status=400)
-
-#         try:
-#             # Read CSV into DataFrame
-#             df = pd.read_csv(uploaded_file)
-#             df.columns = df.columns.str.strip()
-
-#             if 'roll' not in df.columns:
-#                 return JsonResponse({'error': "'roll' column not found in the file"}, status=400)
-
-#             if roll not in df['roll'].values:
-#                 return JsonResponse({'error': 'Roll number not found in the file'}, status=404)
-
-#             # Always calculate average for all students
-#             df['Average'] = df[['DAA', 'JAVA', 'PYTHON', 'C++']].mean(axis=1)
-
-#             # Filter the student with the given roll
-#             student_data = df[df['roll'] == roll].to_dict(orient='records')[0]
-#             return JsonResponse({'student': student_data})
-        
-#         except Exception as e:
-#             return JsonResponse({'error': str(e)}, status=500)
-
 
 
 import pandas as pd
@@ -190,7 +157,7 @@ from django.http import JsonResponse
 from .models import Marks, Students
 
 @method_decorator(csrf_exempt, name='dispatch')
-class FileUploadView(View):
+class LargeFilePricessingView(View):
     def post(self, request):
         student_file = request.FILES.get('student_file')
         marks_file = request.FILES.get('marks_file')
@@ -226,7 +193,7 @@ class FileUploadView(View):
                         'number': row.get('number', ''),
                     }
                 )
-
+            
             # Save/update marks
             for _, row in df_marks.iterrows():
                 student_obj = Students.objects.filter(roll=row['roll']).first()
@@ -246,17 +213,21 @@ class FileUploadView(View):
                 )
 
             # Return data for specific roll if provided
-            if user_roll:
-                marks = Marks.objects.filter(roll__roll=user_roll).values(
-                    'roll__roll', 'daa', 'java', 'python', 'cpp', 'average'
+            is_valid_roll = Students.objects.filter(roll=user_roll).exists()
+            if user_roll and is_valid_roll:
+                marks = Marks.objects.filter(roll=user_roll).values(
+                    'roll', 'daa', 'java', 'python', 'cpp', 'average'
                 ).first()
 
                 if not marks:
                     return JsonResponse({'error': 'Roll number not found'}, status=404)
 
-                return JsonResponse({'marks': marks})
-
-            return JsonResponse({'message': 'Data uploaded successfully'})
+                details = Students.objects.filter(roll=user_roll).values(
+                    'roll', 'name', 'email', 'branch', 'semester', 'section', 'number'
+                ).first()
+                return JsonResponse({'message': 'Data uploaded successfully','details' : details, 'marks': marks})
+            else:
+                return JsonResponse({'message': 'Data uploaded successfully but Roll number not found'})
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)

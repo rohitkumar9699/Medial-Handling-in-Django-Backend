@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UploadView, ListMediaView, ViewView, DeleteView, UpdateView, FileUploadView
+from .views import UploadView, ListMediaView, ViewView, DeleteView, UpdateView, LargeFilePricessingView
 
 urlpatterns = [
     path('upload/', UploadView.as_view(), name='upload'),
@@ -7,6 +7,6 @@ urlpatterns = [
     path('list/<int:file_id>/', ViewView.as_view(), name='media-detail'),
     path('update/', UpdateView.as_view(), name='update'),  # ✅ Update endpoint
     path('delete/', DeleteView.as_view(), name='delete'),
-    path('upload-marks/', FileUploadView.as_view(), name='upload-marks'),
+    path('LargeFilePricessingView/', LargeFilePricessingView.as_view(), name='LargeFilePricessingView'),
 
 ]
