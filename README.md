@@ -110,4 +110,4 @@ python manage.py runserver
 
 ## Author
 
-Generated with ❤️ by ChatGPT based on your Django views.
+Generated with ❤️ by Rohit Kumar based on your Django Project.
